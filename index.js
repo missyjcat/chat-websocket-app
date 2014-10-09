@@ -47,9 +47,16 @@ var app = require('express')();
  * `http` is a module that comes with node. Server is a class that emits events
  * but not sure what it's doing with the express app argument. Why aren't we
  * using `.createServer`?
+ *
+ * Just got on IRC and Aria said that createServer is the right way to do it.
  */
-var http = require('http').Server(app);
+var http = require('http').createServer(app);
 var path = require('path');
+
+/**
+ * Loading the `socket.io` module and passing in our node server
+ */
+var io = require('socket.io')(http);
 
 app.get('/jess', function(req, res) {
 
@@ -60,6 +67,33 @@ app.get('/jess', function(req, res) {
      * res.sendFile( String ) will send a file over
      */
     res.sendFile('index.html', { root: path.join(__dirname)});
+});
+
+/**
+ * Socket.io is listening for the "connection" event for incoming sockets and
+ * then logging
+ */
+io.on('connection', function(socket) {
+    console.log('a user connected');
+    // console.log("socket: ");
+    // console.log(socket);
+    
+    /**
+     * And when sockets disconnect, we can listen for that too.
+     */
+    socket.on('disconnect', function() {
+        console.log('user disconnected');
+    });
+
+    /**
+     * The "chat message" event is emitted from the client, which is listened
+     * for here and a callback is fired.
+     */
+    socket.on('chat message', function(data) {
+        console.log(data);
+        io.emit('chat message', data);
+    });
+
 });
 
 http.listen(3000, function() {
