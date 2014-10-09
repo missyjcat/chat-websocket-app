@@ -36,7 +36,7 @@
 
             socket.on('chat message', function(data) {
                 var line = document.createElement('li');
-                line.innerHTML = data;
+                line.innerHTML = data.message;
                 messageList.appendChild(line);
             });
 

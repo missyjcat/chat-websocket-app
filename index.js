@@ -91,7 +91,10 @@ io.on('connection', function(socket) {
      */
     socket.on('chat message', function(data) {
         console.log(data);
-        io.emit('chat message', data);
+        io.emit('chat message', 
+            {
+                message: data
+            });
     });
 
 });
