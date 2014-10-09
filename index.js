@@ -74,15 +74,23 @@ app.get('/jess', function(req, res) {
  * then logging
  */
 io.on('connection', function(socket) {
-    console.log('a user connected');
     // console.log("socket: ");
     // console.log(socket);
     
     /**
+     * Listen for a 'store username' event. If it appears, assign this socket
+     * a username property with the message.
+     */
+    socket.on('store username', function(data) {
+        socket.username = data || socket.id;
+        io.emit('status message', { message: socket.username + ' is here.' });
+    });
+
+    /**
      * And when sockets disconnect, we can listen for that too.
      */
     socket.on('disconnect', function() {
-        console.log('user disconnected');
+        io.emit('status message', { message: socket.username + ' disconnected' });
     });
 
     /**
@@ -91,10 +99,25 @@ io.on('connection', function(socket) {
      */
     socket.on('chat message', function(data) {
         console.log(data);
-        io.emit('chat message', 
+
+        /**
+         * `io.emit()` sends a message to errbody. `socket.emit()` will only
+         * send a message to the currently connected socket.
+         * `socket.broadcast.emit()` will send a message to every socket except
+         * the originating socket.
+         */
+        io.emit('chat message',
             {
+                sender: socket.username,
                 message: data
             });
+    });
+
+    socket.on('typing', function(data) {
+        socket.broadcast.emit('typing',
+        {
+            username: socket.username
+        });
     });
 
 });

@@ -11,11 +11,13 @@
           #messages { list-style-type: none; margin: 0; padding: 0; }
           #messages li { padding: 5px 10px; }
           #messages li:nth-child(odd) { background: #eee; }
+          .typing-text { display: none; color: grey; font-style: italic; }
         </style>
         <script src="https://cdn.socket.io/socket.io-1.1.0.js"></script>
     </head>
     <body>
         <ul id="messages"></ul>
+        <div id="typing"><span class="typing-text"></span></div>
         <form action="" id="messageForm">
             <input id="m" autocomplete="off" /><button>Send</button>
         </form>
@@ -28,15 +30,72 @@
             var form = document.getElementById('messageForm');
             var message = document.getElementById('m');
             var messageList = document.getElementById('messages');
+
+            var username = prompt('What is your username?');
+            socket.emit('store username', username);
+
+
+            /**
+             * If there is a message, emit a 'chat message' event. And be sure
+             * to return false either way.
+             */
             form.onsubmit = function() {
-                socket.emit('chat message', m.value);
-                m.value = '';
+                if (m.value) {
+                    socket.emit('chat message', m.value);
+                    m.value = '';
+                }
                 return false;
             };
 
+            /**
+             * Whenever the user presses a key, and as long as it's not the
+             * enter key, emit a "typing" event
+             */
+            message.onkeyup = function(event) {
+                if (event.keyCode !== 13) {
+                    socket.emit('typing');    
+                }
+                
+            };
+
+            /**
+             * Store a timeout variable outside the scope of the event listener
+             * so we can keep track of when a key has been pressed
+             */
+            var timeout;
+
+            /**
+             * Listen for a broadcasted "typing" event. If typing is happening,
+             * insert some HTML into our type span and display it. Then hide it
+             * after a short delay only if there is no other key being pressed.
+             * If there is a key pressed within the time that a setTimeout is
+             * taking place, clear that setTimeout and set another timeout.
+             */
+            socket.on('typing', function(data) {
+                var typespan = document.querySelector('.typing-text');
+                typespan.innerHTML = data.username + ' is typing...';
+                typespan.style.display = 'block';
+                if (timeout) {
+                    clearTimeout(timeout);
+                }
+                timeout = setTimeout(function() {
+                    typespan.style.display = 'none';
+                }, 300);
+            });
+
             socket.on('chat message', function(data) {
                 var line = document.createElement('li');
-                line.innerHTML = data.message;
+                line.innerHTML = data.sender + ': ' + data.message;
+                messageList.appendChild(line);
+            });
+
+            /**
+             * A status message is a message emitted from the server, and not
+             * a client message. So we will style it as such.
+             */
+            socket.on('status message', function(data) {
+                var line = document.createElement('li');
+                line.innerHTML = '<strong>' + data.message + '</strong>';
                 messageList.appendChild(line);
             });
 
